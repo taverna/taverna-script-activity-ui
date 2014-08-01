@@ -20,11 +20,15 @@
  ******************************************************************************/
 package net.sf.taverna.t2.activities.script.servicedescriptions;
 
+import java.awt.Color;
+
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
+import net.sf.taverna.t2.activities.externaltool.ExternalToolActivity;
 import net.sf.taverna.t2.activities.script.ScriptActivity;
 import net.sf.taverna.t2.workbench.activityicons.ActivityIconSPI;
+import net.sf.taverna.t2.workbench.ui.impl.configuration.colour.ColourManager;
 import net.sf.taverna.t2.workflowmodel.processor.activity.Activity;
 
 /**
@@ -35,6 +39,14 @@ import net.sf.taverna.t2.workflowmodel.processor.activity.Activity;
 public class ScriptActivityIcon implements ActivityIconSPI {
 
 	static Icon icon = null;
+	
+	 private static final String PROCESSOR_COLOUR_STRING = "#CBC29D";
+	
+	static {
+	    // set colour for XPath processors in the workflow diagram
+	    ColourManager.getInstance().setPreferredColour(
+	        ScriptActivity.class.getCanonicalName(), Color.decode(PROCESSOR_COLOUR_STRING));
+	  }
 
 	public int canProvideIconScore(Activity<?> activity) {
 		if (activity instanceof ScriptActivity)
@@ -49,7 +61,7 @@ public class ScriptActivityIcon implements ActivityIconSPI {
 	
 	public static Icon getScriptIcon() {
 		if (icon == null) {
-			icon = new ImageIcon(ScriptActivityIcon.class.getResource("/ogc.png"));
+			icon = new ImageIcon(ScriptActivityIcon.class.getResource("/scroll-small.png"));
 		}
 		return icon;
 	}

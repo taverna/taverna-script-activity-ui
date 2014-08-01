@@ -42,7 +42,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.help.CSH;
 import javax.script.ScriptEngineFactory;
@@ -77,6 +79,7 @@ import net.sf.taverna.t2.activities.script.ScriptActivity;
 import net.sf.taverna.t2.activities.script.ScriptActivityConfigurationBean;
 import net.sf.taverna.t2.activities.script.ScriptActivityHealthChecker;
 import net.sf.taverna.t2.activities.script.ScriptEngineUtils;
+import net.sf.taverna.t2.activities.script.ScriptEscapingType;
 import net.sf.taverna.t2.lang.ui.EditorKeySetUtil;
 import net.sf.taverna.t2.lang.ui.FileTools;
 import net.sf.taverna.t2.lang.ui.KeywordDocument;
@@ -127,11 +130,8 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 	/** The beanshell script */
 	private JEditorPane scriptTextArea;
 	
-	private JComboBox<ScriptEngineFactory> scriptEngineComboBox;
-	
-    private JCheckBox stdInCheckBox = new JCheckBox("Show STDIN");
-    private JCheckBox stdOutCheckBox = new JCheckBox("Show STDOUT");
-    private JCheckBox stdErrCheckBox = new JCheckBox("Show STDERR");
+	private JComboBox<String> scriptEngineComboBox;
+
 	
 	/** A list of views over the input ports */
 	private List<ScriptInputViewer> inputViewList;
@@ -210,6 +210,8 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 	}
 
 	private ScriptActivityConfigurationBean makeConfiguration() {
+		
+		Map<String, ScriptEscapingType> newEscaping = new TreeMap<String, ScriptEscapingType>();
 		// Set the new configuration
 		List<ActivityInputPortDefinitionBean> inputBeanList = new ArrayList<ActivityInputPortDefinitionBean>();
 		for (ScriptInputViewer inputView : inputViewList) {
@@ -223,13 +225,14 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 					.setTranslatedElementType(inputView.getBean()
 							.getTranslatedElementType());
 			activityInputPortDefinitionBean
-					.setAllowsLiteralValues((Boolean) inputView
-							.getLiteralSelector().getSelectedItem());
+					.setAllowsLiteralValues(true);
 			activityInputPortDefinitionBean
 					.setDepth((Integer) inputView.getDepthSpinner()
 							.getValue());
-			activityInputPortDefinitionBean.setName(inputView
-					.getNameField().getText());
+			String name = inputView
+					.getNameField().getText();
+			activityInputPortDefinitionBean.setName(name);
+			newEscaping.put(name, (ScriptEscapingType) inputView.getEscapingSelector().getSelectedItem());
 			inputBeanList.add(activityInputPortDefinitionBean);
 		}
 
@@ -260,10 +263,7 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		
 		ScriptActivityConfigurationBean newConfiguration =
 			(ScriptActivityConfigurationBean) cloneBean (configuration);
-		newConfiguration.setEngineName(((ScriptEngineFactory)scriptEngineComboBox.getSelectedItem()).getEngineName());
-		newConfiguration.setIncludedStdErr(stdErrCheckBox.isSelected());
-		newConfiguration.setIncludedStdIn(stdInCheckBox.isSelected());
-		newConfiguration.setIncludedStdOut(stdOutCheckBox.isSelected());
+		newConfiguration.setEngineName((String)scriptEngineComboBox.getSelectedItem());
 		newConfiguration.setScript(scriptTextArea
 				.getText());
 		newConfiguration
@@ -274,17 +274,15 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		newConfiguration.setClassLoaderSharing(classLoaderSharing);
 		newConfiguration.setLocalDependencies(localDependencies);
 		newConfiguration.setArtifactDependencies(new LinkedHashSet<BasicArtifact>());
+		newConfiguration.setInputEscaping(newEscaping);
 		return newConfiguration;
 	}
 
 	public boolean isConfigurationChanged() {
 		return !((!inputsChanged)
 		&& (!outputsChanged)
-		&& ((ScriptEngineFactory)scriptEngineComboBox.getSelectedItem()).getEngineName().equals(configuration.getEngineName())
+		&& (scriptEngineComboBox.getSelectedItem().equals(configuration.getEngineName()))
 		&& scriptTextArea.getText().equals(configuration.getScript())
-		&& (stdErrCheckBox.isSelected() == configuration.isIncludedStdErr())
-		&& (stdInCheckBox.isSelected() == configuration.isIncludedStdIn())
-		&& (stdOutCheckBox.isSelected() == configuration.isIncludedStdOut())
 		&& classLoaderSharing.equals(configuration.getClassLoaderSharing())
 		&& localDependencies.equals(configuration.getLocalDependencies()));
 	}
@@ -334,26 +332,13 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		add(tabbedPane, outerConstraint);
 		
 		scriptEngineComboBox =
-			new JComboBox(ScriptEngineUtils.getApplicableFactories().toArray());
-
-		scriptEngineComboBox.setRenderer(new ListCellRenderer() {
-
-			@Override
-			public Component getListCellRendererComponent(JList list,
-					Object value, int index, boolean isSelected,
-					boolean cellHasFocus) {
-				if (value instanceof ScriptEngineFactory) {
-					ScriptEngineFactory thing = (ScriptEngineFactory) value;
-					return new JLabel(thing.getEngineName());
-				}
-				return new JLabel("unknown");
-			}});
+			new JComboBox(ScriptEngineUtils.getApplicableFactoryNames().toArray());
 		
 		JPanel comboPanel = new JPanel(new FlowLayout());
 		comboPanel.add(new JLabel("Script type:"));
 		String engineName = configuration.getEngineName();
 		if (ScriptEngineUtils.getScriptEngine(engineName) != null) {
-			scriptEngineComboBox.setSelectedItem(ScriptEngineUtils.getApplicableFactory(engineName));
+			scriptEngineComboBox.setSelectedItem(engineName);
 		}
 		comboPanel.add(scriptEngineComboBox);
 		scriptEditPanel.add(comboPanel, BorderLayout.NORTH);
@@ -411,14 +396,6 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 			}
 
 		});
-		
-        JPanel streamPanel = new JPanel(new FlowLayout());
-        streamPanel.add(stdInCheckBox);
-        stdInCheckBox.setSelected(configuration.isIncludedStdIn());
-        streamPanel.add(stdOutCheckBox);
-        stdOutCheckBox.setSelected(configuration.isIncludedStdOut());
-        streamPanel.add(stdErrCheckBox);
-        stdErrCheckBox.setSelected(configuration.isIncludedStdErr());
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.setLayout(new FlowLayout());;
@@ -427,7 +404,6 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		buttonPanel.add(clearScriptButton);
 		
         JPanel subPanel = new JPanel(new GridLayout(2,1));
-        subPanel.add(streamPanel);
         subPanel.add(buttonPanel);
 		
 		scriptEditPanel.add(subPanel, BorderLayout.SOUTH);
@@ -657,8 +633,10 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 
 		inputEditPanel.add(new JLabel("Name"), inputConstraint);
 		inputConstraint.gridx = 1;
+		inputConstraint.weightx = 0.0;
 		inputEditPanel.add(new JLabel("Depth"), inputConstraint);
-
+		inputConstraint.gridx = 2;
+		inputEditPanel.add(new JLabel("Escaping"), inputConstraint);
 		inputGridy = 1;
 		inputConstraint.gridx = 0;
 		for (ActivityInputPortDefinitionBean inputBean : configuration
@@ -695,6 +673,16 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 			});
 			inputEditPanel.add(depthSpinner, inputConstraint);
 			inputConstraint.gridx = 2;
+			final JComboBox scriptEscapingSelector = scriptInputViewer.getEscapingSelector();
+			scriptEscapingSelector.setSelectedItem(configuration.getInputEscaping(inputBean.getName()));
+			scriptEscapingSelector.addItemListener(new ItemListener(){
+				@Override
+				public void itemStateChanged(ItemEvent arg0) {
+					inputsChanged = true;
+				}
+			});
+			inputEditPanel.add(scriptEscapingSelector, inputConstraint);
+			inputConstraint.gridx = 3;
 			final JButton removeButton = new JButton("Remove");
 			removeButton.addActionListener(new AbstractAction() {
 
@@ -705,6 +693,7 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 					inputViewList.remove(scriptInputViewer);
 					inputEditPanel.remove(nameField);
 					inputEditPanel.remove(depthSpinner);
+					inputEditPanel.remove(scriptEscapingSelector);
 					inputEditPanel.remove(removeButton);
 					inputEditPanel.revalidate();
 					inputEditPanel.repaint();
@@ -772,6 +761,10 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 						.getDepthSpinner();
 				inputEditPanel.add(depthSpinner, inputConstraint);
 				inputConstraint.gridx = 2;
+				final JComboBox scriptEscapingSelector = scriptInputViewer.getEscapingSelector();
+				scriptEscapingSelector.setSelectedItem(configuration.getInputEscaping(bean.getName()));
+				inputEditPanel.add(scriptEscapingSelector, inputConstraint);
+				inputConstraint.gridx = 3;
 				final JButton removeButton = new JButton("Remove");
 				removeButton.addActionListener(new AbstractAction() {
 
@@ -779,6 +772,7 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 						inputViewList.remove(scriptInputViewer);
 						inputEditPanel.remove(nameField);
 						inputEditPanel.remove(depthSpinner);
+						inputEditPanel.remove(scriptEscapingSelector);
 						inputEditPanel.remove(removeButton);
 						inputEditPanel.revalidate();
 						inputEditPanel.repaint();

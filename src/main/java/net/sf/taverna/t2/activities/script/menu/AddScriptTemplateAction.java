@@ -31,7 +31,7 @@ import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 
 import net.sf.taverna.t2.activities.script.ScriptActivity;
-import net.sf.taverna.t2.activities.script.servicedescriptions.ScriptTemplateService;
+import net.sf.taverna.t2.activities.script.servicedescriptions.ScriptServiceDesc;
 import net.sf.taverna.t2.ui.menu.AbstractContextualMenuAction;
 import net.sf.taverna.t2.workbench.activityicons.ActivityIconManager;
 import net.sf.taverna.t2.workbench.file.FileManager;
@@ -83,7 +83,7 @@ public class AddScriptTemplateAction extends AbstractContextualMenuAction {
 			Dataflow workflow = FileManager.getInstance()
 			.getCurrentDataflow();
 
-	WorkflowView.importServiceDescription(ScriptTemplateService.getServiceDescription(),
+	WorkflowView.importServiceDescription(new ScriptServiceDesc(),
 			false);
 		}
 	}

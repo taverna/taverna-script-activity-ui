@@ -21,15 +21,12 @@
 package net.sf.taverna.t2.activities.script.menu;
 
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
 import java.net.URI;
 
 import javax.swing.Action;
-import javax.swing.KeyStroke;
 
 import net.sf.taverna.t2.activities.script.ScriptActivity;
-import net.sf.taverna.t2.activities.script.servicedescriptions.ScriptTemplateService;
+import net.sf.taverna.t2.activities.script.servicedescriptions.ScriptServiceDesc;
 import net.sf.taverna.t2.ui.menu.AbstractMenuAction;
 import net.sf.taverna.t2.workbench.activityicons.ActivityIconManager;
 import net.sf.taverna.t2.workbench.ui.workflowview.WorkflowView;
@@ -76,7 +73,7 @@ public class AddScriptTemplateMenuAction extends AbstractMenuAction {
 		}
 
 		public void actionPerformed(ActionEvent e) {
-			WorkflowView.importServiceDescription(ScriptTemplateService.getServiceDescription(),
+			WorkflowView.importServiceDescription(new ScriptServiceDesc(),
 			false);
 		}
 	}

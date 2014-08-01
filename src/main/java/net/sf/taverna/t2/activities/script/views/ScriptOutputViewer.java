@@ -44,7 +44,7 @@ import net.sf.taverna.t2.workflowmodel.processor.activity.config.ActivityOutputP
  * 
  */
 @SuppressWarnings("serial")
-public class ScriptOutputViewer extends JPanel {
+public class ScriptOutputViewer {
 	/** The bean which defines this view */
 	private ActivityOutputPortDefinitionBean bean;
 	/** The name of the port */
@@ -52,8 +52,7 @@ public class ScriptOutputViewer extends JPanel {
 	/** The depth of the port */
 	private JSpinner depthSpinner;
 	/** The granular depth of the port */
-	private JSpinner granularDepthSpinner;
-	/** Whether the values in the bean can be edited */
+
 	private boolean editable;
 	// private final JList mimeDropList = new JList();
 	
@@ -75,7 +74,6 @@ public class ScriptOutputViewer extends JPanel {
 			boolean editable) {
 		this.bean = bean;
 		this.editable = editable;
-		setBorder(javax.swing.BorderFactory.createEtchedBorder());
 		initView();
 		setEditable(editable);
 	}
@@ -85,34 +83,12 @@ public class ScriptOutputViewer extends JPanel {
 	 * name, depth and granular depth
 	 */
 	private void initView() {
-		setLayout(new GridBagLayout());
-		GridBagConstraints outerConstraint = new GridBagConstraints();
-		outerConstraint.anchor = GridBagConstraints.FIRST_LINE_START;
-		outerConstraint.gridx = 0;
-		outerConstraint.gridy = 0;
-		outerConstraint.weighty = 0;
-		outerConstraint.weightx = 0.1;
-		outerConstraint.fill = GridBagConstraints.BOTH;
-
 		nameField = new JTextField(bean.getName());
 		SanitisingDocumentFilter.addFilterToComponent(nameField);
-		add(nameField, outerConstraint);
-
-		outerConstraint.gridx = 1;
 		SpinnerNumberModel depthModel = new SpinnerNumberModel(new Integer(bean
 				.getDepth()), new Integer(0), new Integer(100), new Integer(1));
 		depthSpinner = new JSpinner(depthModel);
 		depthSpinner.setToolTipText("A depth of 0 means a simple value, like a string. Depth 1 is a list of simple values, while depth 2 is a list of a list of simple values");
-		// depthSpinner.setValue(bean.getDepth());
-		add(depthSpinner, outerConstraint);
-
-		outerConstraint.gridx = 2;
-		SpinnerNumberModel granularModel = new SpinnerNumberModel(new Integer(
-				bean.getDepth()), new Integer(0), new Integer(100),
-				new Integer(1));
-		granularDepthSpinner = new JSpinner(granularModel);
-		// granularDepthSpinner.setValue(bean.getGranularDepth());
-		add(granularDepthSpinner, outerConstraint);
 
 	}
 
@@ -134,16 +110,6 @@ public class ScriptOutputViewer extends JPanel {
 	 */
 	public JSpinner getDepthSpinner() {
 		return depthSpinner;
-	}
-
-	/**
-	 * The component which allows the granular depth of the
-	 * {@link ActivityOutputPortDefinitionBean} to be changed
-	 * 
-	 * @return
-	 */
-	public JSpinner getGranularDepthSpinner() {
-		return granularDepthSpinner;
 	}
 
 	/**
@@ -182,7 +148,6 @@ public class ScriptOutputViewer extends JPanel {
 		// this.addMimeTypeButton.setVisible(editable);
 		// this.mimeDropList.setVisible(editable);
 		this.depthSpinner.setEnabled(editable);
-		this.granularDepthSpinner.setEnabled(editable);
 		this.nameField.setEditable(editable);
 
 	}

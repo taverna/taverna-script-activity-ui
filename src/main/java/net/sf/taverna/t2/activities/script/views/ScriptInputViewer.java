@@ -31,6 +31,7 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 
 import net.sf.taverna.t2.activities.script.ScriptActivity;
+import net.sf.taverna.t2.activities.script.ScriptEscapingType;
 import net.sf.taverna.t2.lang.ui.SanitisingDocumentFilter;
 import net.sf.taverna.t2.workflowmodel.processor.activity.config.ActivityInputPortDefinitionBean;
 
@@ -43,7 +44,7 @@ import net.sf.taverna.t2.workflowmodel.processor.activity.config.ActivityInputPo
  * 
  */
 @SuppressWarnings("serial")
-public class ScriptInputViewer extends JPanel {
+public class ScriptInputViewer {
 
 	private ActivityInputPortDefinitionBean bean;
 
@@ -51,7 +52,7 @@ public class ScriptInputViewer extends JPanel {
 
 	private JSpinner depthSpinner;
 
-	private JComboBox literalSelector;
+	private JComboBox<ScriptEscapingType> escapingSelector;
 
 	private boolean editable;
 
@@ -69,7 +70,6 @@ public class ScriptInputViewer extends JPanel {
 			boolean editable) {
 		this.bean = bean;
 		this.editable = editable;
-		setBorder(javax.swing.BorderFactory.createEtchedBorder());
 		initView();
 		setEditMode();
 	}
@@ -80,39 +80,14 @@ public class ScriptInputViewer extends JPanel {
 	 * {@link ActivityInputPortDefinitionBean} to be changeD
 	 */
 	private void initView() {
-		setLayout(new GridBagLayout());
-		GridBagConstraints outerConstraint = new GridBagConstraints();
-		outerConstraint.anchor = GridBagConstraints.FIRST_LINE_START;
-		outerConstraint.gridx = 0;
-		outerConstraint.gridy = 0;
-		outerConstraint.weighty = 0;
-		outerConstraint.weightx = 0.1;
-		outerConstraint.fill = GridBagConstraints.BOTH;
-
 		nameField = new JTextField(bean.getName());
 		SanitisingDocumentFilter.addFilterToComponent(nameField);
-		add(nameField, outerConstraint);
-
-		Vector<Boolean> literalSelectorList = new Vector<Boolean>();
-		literalSelectorList.add(true);
-		literalSelectorList.add(false);
-		literalSelector = new JComboBox(literalSelectorList);
-		if (!bean.getAllowsLiteralValues()) {
-			literalSelector.setSelectedIndex(1);
-		}
-		outerConstraint.gridx = 1;
-		add(literalSelector, outerConstraint);
-
-		outerConstraint.gridx = 2;
 		SpinnerNumberModel model = new SpinnerNumberModel(new Integer(bean
 				.getDepth()), new Integer(0), new Integer(100), new Integer(1));
 		depthSpinner = new JSpinner(model);
 		depthSpinner.setEnabled(false);
 		depthSpinner.setToolTipText("A depth of 0 means a simple value, like a string. Depth 1 is a list of simple values, while depth 2 is a list of a list of simple values");
-		// depthSpinner.setValue(bean.getDepth());
-
-		add(depthSpinner, outerConstraint);
-
+		escapingSelector = new JComboBox<ScriptEscapingType>(ScriptEscapingType.values());
 	}
 
 	/**
@@ -126,23 +101,16 @@ public class ScriptInputViewer extends JPanel {
 	}
 
 	/**
-	 * Set the
-	 * {@link ActivityInputPortDefinitionBean#setAllowsLiteralValues(boolean)}
-	 * to be true or false using this component
-	 * 
-	 * @return
-	 */
-	public JComboBox getLiteralSelector() {
-		return literalSelector;
-	}
-
-	/**
 	 * Change the depth of the {@link ActivityInputPortDefinitionBean}
 	 * 
 	 * @return
 	 */
 	public JSpinner getDepthSpinner() {
 		return depthSpinner;
+	}
+	
+	public JComboBox<ScriptEscapingType> getEscapingSelector() {
+		return escapingSelector;
 	}
 
 	/**
@@ -180,9 +148,8 @@ public class ScriptInputViewer extends JPanel {
 	 */
 	public void setEditMode() {
 		this.nameField.setEditable(editable);
-		this.literalSelector.setEnabled(editable);
 		this.depthSpinner.setEnabled(editable);
-
+		this.escapingSelector.setEnabled(editable);
 	}
 
 }
