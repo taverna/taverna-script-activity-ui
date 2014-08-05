@@ -58,8 +58,10 @@ import javax.swing.JComboBox;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
@@ -73,6 +75,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import net.sf.taverna.raven.repository.BasicArtifact;
+import net.sf.taverna.raven.spi.SpiRegistry;
 import net.sf.taverna.t2.activities.dependencyactivity.AbstractAsynchronousDependencyActivity;
 import net.sf.taverna.t2.activities.dependencyactivity.AbstractAsynchronousDependencyActivity.ClassLoaderSharing;
 import net.sf.taverna.t2.activities.script.ScriptActivity;
@@ -80,6 +83,7 @@ import net.sf.taverna.t2.activities.script.ScriptActivityConfigurationBean;
 import net.sf.taverna.t2.activities.script.ScriptActivityHealthChecker;
 import net.sf.taverna.t2.activities.script.ScriptEngineUtils;
 import net.sf.taverna.t2.activities.script.ScriptEscapingType;
+import net.sf.taverna.t2.activities.script.generator.ScriptGenerator;
 import net.sf.taverna.t2.lang.ui.EditorKeySetUtil;
 import net.sf.taverna.t2.lang.ui.FileTools;
 import net.sf.taverna.t2.lang.ui.KeywordDocument;
@@ -87,6 +91,7 @@ import net.sf.taverna.t2.lang.ui.LineEnabledTextPanel;
 import net.sf.taverna.t2.lang.ui.LinePainter;
 import net.sf.taverna.t2.lang.ui.NoWrapEditorKit;
 import net.sf.taverna.t2.reference.ExternalReferenceSPI;
+import net.sf.taverna.t2.spi.SPIRegistry;
 import net.sf.taverna.t2.visit.VisitReport;
 import net.sf.taverna.t2.workbench.ui.views.contextualviews.activity.ActivityConfigurationPanel;
 import net.sf.taverna.t2.workflowmodel.OutputPort;
@@ -129,9 +134,6 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 	///////// Beanshell properties that can be configured ////////
 	/** The beanshell script */
 	private JEditorPane scriptTextArea;
-	
-	private JComboBox<String> scriptEngineComboBox;
-
 	
 	/** A list of views over the input ports */
 	private List<ScriptInputViewer> inputViewList;
@@ -183,6 +185,7 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 	private static Set<String> keys = EditorKeySetUtil.loadKeySet(ScriptConfigView.class.getResourceAsStream("keys.txt"));
 
 	//private File currentDirectory = null;
+
 
 
 	/**
@@ -263,7 +266,6 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		
 		ScriptActivityConfigurationBean newConfiguration =
 			(ScriptActivityConfigurationBean) cloneBean (configuration);
-		newConfiguration.setEngineName((String)scriptEngineComboBox.getSelectedItem());
 		newConfiguration.setScript(scriptTextArea
 				.getText());
 		newConfiguration
@@ -281,7 +283,6 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 	public boolean isConfigurationChanged() {
 		return !((!inputsChanged)
 		&& (!outputsChanged)
-		&& (scriptEngineComboBox.getSelectedItem().equals(configuration.getEngineName()))
 		&& scriptTextArea.getText().equals(configuration.getScript())
 		&& classLoaderSharing.equals(configuration.getClassLoaderSharing())
 		&& localDependencies.equals(configuration.getLocalDependencies()));
@@ -330,18 +331,6 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		outerConstraint.weighty = 0.1;
 		outerConstraint.weightx = 0.1;
 		add(tabbedPane, outerConstraint);
-		
-		scriptEngineComboBox =
-			new JComboBox(ScriptEngineUtils.getApplicableFactoryNames().toArray());
-		
-		JPanel comboPanel = new JPanel(new FlowLayout());
-		comboPanel.add(new JLabel("Script type:"));
-		String engineName = configuration.getEngineName();
-		if (ScriptEngineUtils.getScriptEngine(engineName) != null) {
-			scriptEngineComboBox.setSelectedItem(engineName);
-		}
-		comboPanel.add(scriptEngineComboBox);
-		scriptEditPanel.add(comboPanel, BorderLayout.NORTH);
 
 		scriptTextArea = new JTextPane();
 		new LinePainter(scriptTextArea, LINE_COLOR);
@@ -366,6 +355,9 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 		
 		scriptEditPanel.add(new LineEnabledTextPanel(scriptTextArea), BorderLayout.CENTER);
 		
+		JPanel buttonPanel = new JPanel();
+		buttonPanel.setLayout(new FlowLayout());;
+		
 		JButton loadScriptButton = new JButton("Load script");
 		loadScriptButton.setToolTipText("Load a beanshell script from a file");
 		loadScriptButton.addActionListener(new ActionListener() {
@@ -377,7 +369,26 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 				}
 			}
 		});
+		buttonPanel.add(loadScriptButton);
+		
+		List<ScriptGenerator> generators = ScriptGenerator.getGeneratorsFor(configBean);
+		if (!generators.isEmpty()) {
+			final JButton generateScriptButton = new JButton("Generate script");
+			generateScriptButton.setToolTipText("Generate a possible script");
+			
+			final JPopupMenu menu = new JPopupMenu("Menu");
+			for (ScriptGenerator sg : generators) {
+				menu.add(new GeneratorMenuItem(sg, configBean, scriptTextArea));
+			}
 
+			generateScriptButton.addActionListener(new ActionListener(){
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					menu.show(generateScriptButton, generateScriptButton.getWidth()/2, generateScriptButton.getHeight()/2);
+				}});
+			buttonPanel.add(generateScriptButton);
+		}
 		JButton saveRScriptButton = new JButton("Save script");
 		saveRScriptButton.setToolTipText("Save the Beanshell script to a file");
 		saveRScriptButton.addActionListener(new ActionListener() {
@@ -385,7 +396,8 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 				FileTools.saveStringToFile(ScriptConfigView.this, "Save Beanshell script", ".bsh", scriptTextArea.getText());
 			}
 		});
-
+		buttonPanel.add(saveRScriptButton);
+		
 		JButton clearScriptButton = new JButton("Clear script");
 		clearScriptButton
 				.setToolTipText("Clear current script from the edit area");
@@ -396,13 +408,8 @@ public class ScriptConfigView extends ActivityConfigurationPanel<ScriptActivity,
 			}
 
 		});
-
-		JPanel buttonPanel = new JPanel();
-		buttonPanel.setLayout(new FlowLayout());;
-		buttonPanel.add(loadScriptButton);
-		buttonPanel.add(saveRScriptButton);
 		buttonPanel.add(clearScriptButton);
-		
+	
         JPanel subPanel = new JPanel(new GridLayout(2,1));
         subPanel.add(buttonPanel);
 		
